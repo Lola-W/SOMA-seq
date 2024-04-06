@@ -1,2 +1,2 @@
-# Single-cell data analysis template repository
-This contains the raw structure I usually use when doing single-cell data analysis. 
+# SOMA-seq code repository
+This repo is a place holder for running the SOMA-seq pipeline and reproducing the presented analyses.

@@ -1,0 +1,10 @@
+# Instructions:
+- Download the below files to the 'resource' directory using `wget $url` before starting
+- Use 'gunzip' to decompress the '.gz' files before use.
+
+# Genome Reference Files (Reference: Best practice provided by 10x on March 13, 2024: https://www.10xgenomics.com/support/software/cell-ranger/downloads/cr-ref-build-steps)
+fasta in: http://ftp.ensembl.org/pub/release-109/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz
+gtf in: http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_44/gencode.v44.primary_assembly.annotation.gtf.gz
+
+# Whitelist File
+3M-february-2018.txt: https://teichlab.github.io/scg_lib_structs/data/10X-Genomics/3M-february-2018.txt.gz

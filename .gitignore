@@ -134,12 +134,12 @@ dmypy.json
 *.h5ad
 *.loom
 *.pdf
-*.png
+#*.png
 *.jpg
 *.jpeg
 *.svg
 *.mtx
-*.txt
+#*.txt
 *.rds
 
 # OS specifics

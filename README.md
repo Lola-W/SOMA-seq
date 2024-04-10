@@ -70,42 +70,42 @@ Before starting with the analysis, ensure all dependencies are installed as list
 
 First download the required files in [resources_to_download.txt](resources/resources_to_download.txt)
 
-It is optional but you could set global variables like `INPUTFOLDER="/path/to/input_data"`
+It is optional but you could set global variables like `export INPUTFOLDER="/path/to/input_data"`
 
 #### 0. **Generate Genome Directory**: 
 
-The first step is preparing the GenomeDir for alignment. Run the [`00_generate_genomeDir.sh`](code/alignment/00_generate_genomeDir.sh) script in `code/alignment` to modify FASTA headers to match the GENCODE format and to generate a STAR genome directory.
+  The first step is preparing the GenomeDir for alignment. Run the [`00_generate_genomeDir.sh`](code/alignment/00_generate_genomeDir.sh) script in `code/alignment` to modify FASTA headers to match the GENCODE format and to generate a STAR genome directory.
 
-    ```bash
-    ./code/alignment/00_generate_genomeDir.sh /path/to/Genomic_references/hg38 /path/to/logs
-    ```
+  ```bash
+  ./code/alignment/00_generate_genomeDir.sh /path/to/Genomic_references/hg38 /path/to/logs
+  ```
 
-    Replace `/path/to/Genomic_references/hg38` with the absolute path to where your FASTA and GTF files are located, and `/path/to/logs` with the path where you want the logs to be saved.
+  Replace `/path/to/Genomic_references/hg38` with the absolute path to where your FASTA and GTF files are located, and `/path/to/logs` with the path where you want the logs to be saved.
 
-    This script requires the STAR aligner to be installed or you have a module for STAR 2.7.11a (see the source code).
+  This script requires the STAR aligner to be installed or you have a module for STAR 2.7.11a (see the source code).
 
 #### 1. **sbatch Script Preparation**:
 
-Then we prepare SLURM batch scripts for processing each RNA-seq data sample with the STAR aligner. 
+  Then we prepare SLURM batch scripts for processing each RNA-seq data sample with the STAR aligner. 
 
-Before running [`01_generate_sbatch_script.py`](code/alignment/01_generate_sbatch_script.py), ensure you have:
-- Modified the `--genomeDir` in the generated scripts to point to your $BUILD_PATH/USE_THIS_GenomeDir created in step 0.
-- Downloaded `3M-february-2018.txt` whitelist file as instructed in `resources_to_download.txt` and updated the `--soloCBwhitelist` path in the script accordingly.
+  Before running [`01_generate_sbatch_script.py`](code/alignment/01_generate_sbatch_script.py), ensure you have:
+  - Modified the `--genomeDir` in the generated scripts to point to your $BUILD_PATH/USE_THIS_GenomeDir created in step 0.
+  - Downloaded `3M-february-2018.txt` whitelist file as instructed in `resources_to_download.txt` and updated the `--soloCBwhitelist` path in the script accordingly.
 
-To generate sbatch scripts:
+  To generate sbatch scripts:
 
-```bash
-python code/alignment/01_generate_sbatch_script.py --input_dir /path/to/input_samples --output_dir /path/to/alignment_output --slurm_scripts_dir /path/to/generated_slurm_scripts
-```
+  ```bash
+  python code/alignment/01_generate_sbatch_script.py --input_dir /path/to/input_samples --output_dir /path/to/alignment_output --slurm_scripts_dir /path/to/generated_slurm_scripts
+  ```
 
-Modify `/path/to/input_samples`, `/path/to/alignment_output`, and `/path/to/generated_slurm_scripts` with your specific directories. The `input_dir` should contain directories for each of your samples that you wish to align.
+  Modify `/path/to/input_samples`, `/path/to/alignment_output`, and `/path/to/generated_slurm_scripts` with your specific directories. The `input_dir` should contain directories for each of your samples that you wish to align.
 
 #### 2. **Batch Submission of sbatch Scripts**:
 
-To Submit these scripts as batch jobs to the SLURM scheduler. The script `02_submit_slurm_jobs.py` automates the submission of uncompleted jobs by checking which samples haven't been processed based on the absence of their SLURM log files.
+  To Submit these scripts as batch jobs to the SLURM scheduler. The script `02_submit_slurm_jobs.py` automates the submission of uncompleted jobs by checking which samples haven't been processed based on the absence of their SLURM log files.
 
-To submit the jobs, run:
+  To submit the jobs, run:
 
-```bash
-python code/alignment/02_submit_slurm_jobs.py --res_folder /path/to/slurm_logs --input_folder /path/to/input_data --slurm_scripts_dir /path/to/slurm_scripts
-```
+  ```bash
+  python code/alignment/02_submit_slurm_jobs.py --res_folder /path/to/slurm_logs --input_folder /path/to/input_data --slurm_scripts_dir /path/to/slurm_scripts
+  ```

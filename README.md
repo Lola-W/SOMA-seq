@@ -7,7 +7,9 @@ This repo is a place holder for running the SOMA-seq pipeline and reproducing th
 
 * [Introduction](#introduction)
 * [Installation](#installation)
-* [Somatic mutation calling](#Somatic-mutation-calling)
+* [Somatic mutation calling](#somatic-mutation-calling)
+  * [Alignment](#aligment)
+  * [Monopogen](#monopogen)
 <!-- * [Quick Start](#quick-start)
   * [Data preprocess](#data-preprocess)
   * [Germline SNV calling](#germline-snv-calling)
@@ -20,6 +22,7 @@ This repo is a place holder for running the SOMA-seq pipeline and reproducing th
   * [germline calling](#germline-calling)
   * [ld refinement on putative somatic SNVs](#ld-refinement-on-putative-somatic-SNVs)
 * [FAQs](#faqs) -->
+* [Supplementary Scripts](#supplementary-scripts)
 * [Citation](#citation)
 
 [//]: # 
@@ -29,7 +32,7 @@ Soma-seq is a pipeline designed for the detection and analysis of single-nucleus
 <image src="./resources/OverviewPipeline.png" width="600"> 
 
 The SOMA-seq pipeline is developed using `Python version 3.10.8`
-`R version 4.3.1 (2023-06-16)`, `Platform: x86_64-pc-linux-gnu`and `aarch64-apple-darwin22.4.0, and `Running under: `x86_64, linux-gnu`, `aarch64`, and `darwin22.4.0`. Please note that the code are provided and optimized for SLURM users with HPC.
+`R version 4.3.1 (2023-06-16)`, `Platform: x86_64-pc-linux-gnu`and `aarch64-apple-darwin22.4.0`, and Running under: `x86_64, linux-gnu`, `aarch64`, and `darwin22.4.0`. Please note that the code are provided and optimized for SLURM users with HPC.
 
 The pipeline consists of three main stages:
 
@@ -60,13 +63,15 @@ Then install Monopogen:
 git clone https://github.com/KChen-lab/Monopogen.git
 cd Monopogen 
 pip install -e .
+cd ..
 ```
 
 ## Somatic mutation calling ##
 Before starting with the analysis, ensure all dependencies are installed as listed in `environment.yml` and all necessary data is available in the data directory.
 
-### Aligment
-* **For 10x based snRNA seq data**, follow the steps below
+### Aligment ###
+
+* **For 10x based snRNA seq data**, follow the steps below for using **STARSolo** to algn. You could also opt for CellRanger4 or other alignment tools.
 
 First download the required files in [resources_to_download.txt](resources/resources_to_download.txt)
 
@@ -89,7 +94,9 @@ It is optional but you could set global variables like `export INPUTFOLDER="/pat
   Then we prepare SLURM batch scripts for processing each RNA-seq data sample with the STAR aligner. 
 
   Before running [`01_generate_sbatch_script.py`](code/alignment/01_generate_sbatch_script.py), ensure you have:
-  - Modified the `--genomeDir` in the generated scripts to point to your $BUILD_PATH/USE_THIS_GenomeDir created in step 0.
+
+  - Modified the `--genomeDir` in the generated scripts to point to your `$BUILD_PATH/USE_THIS_GenomeDir` created in step 0.
+
   - Downloaded `3M-february-2018.txt` whitelist file as instructed in `resources_to_download.txt` and updated the `--soloCBwhitelist` path in the script accordingly.
 
   To generate sbatch scripts:
@@ -102,10 +109,23 @@ It is optional but you could set global variables like `export INPUTFOLDER="/pat
 
 #### 2. **Batch Submission of sbatch Scripts**:
 
-  To Submit these scripts as batch jobs to the SLURM scheduler. The script `02_submit_slurm_jobs.py` automates the submission of uncompleted jobs by checking which samples haven't been processed based on the absence of their SLURM log files.
+  To Submit these scripts as batch jobs to the SLURM scheduler. The script [`02_submit_slurm_jobs.py`](code/alignment/02_submit_slurm_jobs.py) automates the submission of uncompleted jobs by checking which samples haven't been processed based on the absence of their SLURM log files.
 
   To submit the jobs, run:
 
   ```bash
   python code/alignment/02_submit_slurm_jobs.py --res_folder /path/to/slurm_logs --input_folder /path/to/input_data --slurm_scripts_dir /path/to/slurm_scripts
   ```
+
+* It is optional, but if you do NOT have the barcode available after running STARsolo, please use [`generateBarcode.py`](utils/generateBarcode.py)
+
+### Monopogen ###
+
+Please reference the github repo for [Monopogen](https://github.com/KChen-lab/Monopogen) for trouble-shooting.
+
+#### 3. **Preprocess and Germline Mutation calling**: 
+
+
+## Supplementary Scripts ##
+
+- `generateBarcode.py`: Barcode Count Generator. This script produces Cellranger4-like `barcode_counts.csv` for STARSolo results. It also helps in assessing the quality of barcode tagging in sequencing experiments. Located in `utils/`, usage instructions are provided within the script.

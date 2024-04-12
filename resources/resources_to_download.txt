@@ -8,3 +8,8 @@ gtf in: http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_44/genc
 
 # Whitelist File
 3M-february-2018.txt: https://teichlab.github.io/scg_lib_structs/data/10X-Genomics/3M-february-2018.txt.gz
+
+# 1KG3 reference panel (hg38) 
+Monopogen suggested: http://ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/1000G_2504_high_coverage/working/20201028_3202_phased/
+However, accroding to the README from 1kGP: "The final and most comprehensive version of the phased panel based on the 3,202 high-coverage 1kGP samples is included in the 20220422_3202_phased_SNV_INDEL_SV/ directory"
+We would suggest using: http://ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/1000G_2504_high_coverage/working/20220422_3202_phased_SNV_INDEL_SV/

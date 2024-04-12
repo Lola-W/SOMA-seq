@@ -93,28 +93,28 @@ It is optional but you could set global variables like `export INPUTFOLDER="/pat
 
   Then we prepare SLURM batch scripts for processing each RNA-seq data sample with the STAR aligner. 
 
-  Before running [`01_generate_sbatch_script.py`](code/alignment/01_generate_sbatch_script.py), ensure you have:
+  Before running [`01_generate_STARSolo_script.py`](code/alignment/01_generate_STARSolo_script.py), ensure you have:
 
-  - Modified the `--genomeDir` in the generated scripts to point to your `$BUILD_PATH/USE_THIS_GenomeDir` created in step 0.
+  - Modified the `--genomeDir` in the [`01_generate_STARSolo_script.py`](code/alignment/01_generate_STARSolo_script.py) point to your `$BUILD_PATH/USE_THIS_GenomeDir` created in step 0.
 
   - Downloaded `3M-february-2018.txt` whitelist file as instructed in `resources_to_download.txt` and updated the `--soloCBwhitelist` path in the script accordingly.
 
   To generate sbatch scripts:
 
   ```bash
-  python code/alignment/01_generate_sbatch_script.py --input_dir /path/to/input_samples --output_dir /path/to/alignment_output --slurm_scripts_dir /path/to/generated_slurm_scripts
+  python code/alignment/01_generate_STARSolo_script.py --input_dir /path/to/input_samples --output_dir /path/to/alignment_output --slurm_scripts_dir /path/to/generated_slurm_scripts
   ```
 
   Modify `/path/to/input_samples`, `/path/to/alignment_output`, and `/path/to/generated_slurm_scripts` with your specific directories. The `input_dir` should contain directories for each of your samples that you wish to align.
 
-#### 2. **Batch Submission of sbatch Scripts**:
+#### **Batch Submission of sbatch Scripts**:
 
-  To Submit these scripts as batch jobs to the SLURM scheduler. The script [`02_submit_slurm_jobs.py`](code/alignment/02_submit_slurm_jobs.py) automates the submission of uncompleted jobs by checking which samples haven't been processed based on the absence of their SLURM log files.
+  To Submit these scripts as batch jobs to the SLURM scheduler. The script [`submit_slurm_jobs.py`](code/submit_slurm_jobs.py) automates the submission of uncompleted jobs by checking which samples haven't been processed based on the absence of their SLURM log files.
 
   To submit the jobs, run:
 
   ```bash
-  python code/alignment/02_submit_slurm_jobs.py --res_folder /path/to/slurm_logs --input_folder /path/to/input_data --slurm_scripts_dir /path/to/slurm_scripts
+  python code/submit_slurm_jobs.py --res_folder /path/to/slurm_logs --input_folder /path/to/input_data --slurm_scripts_dir /path/to/slurm_scripts
   ```
 
 * It is optional, but if you do NOT have the barcode available after running STARsolo, please use [`generateBarcode.py`](utils/generateBarcode.py)
@@ -123,8 +123,54 @@ It is optional but you could set global variables like `export INPUTFOLDER="/pat
 
 Please reference the github repo for [Monopogen](https://github.com/KChen-lab/Monopogen) for trouble-shooting.
 
-#### 3. **Preprocess and Germline Mutation calling**: 
+Before running Monopogen, ensure you have:
 
+  - The conda envirment `somaseqenv` ready. Monopogen and its dependencies installed.
+
+  - Downloaded `1KG3 reference panel` and save into a folder as instructed in `resources_to_download.txt`.
+
+#### 2. **Preprocess and Germline Mutation Calling**: 
+
+First we prepare `.bam.lst` files that each contain one BAM file to be processed using the [`bam_list.sh`](code/Monopogen/bam_list.sh).
+
+```
+path="XXX/Monopogen"  # where Monopogen is downloaded
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${path}/apps
+./code/Monopogen/bam_list.sh /path/to/STARresult /path/to/Monopogen/bamlst
+```
+
+Then use the [`02_generate_germline_script.py`](code/Monopogen/02_generate_germline_script.py) to create SLURM scripts for each sample. These scripts will preprocess the data and call germline mutations using Monopogen.
+
+Before running [`02_generate_germline_script.py`](code/alignment/02_generate_germline_script.py), ensure you have:
+- change the **`-p /path/to/1KG3_imputation_panel/`** pointing to your folder to 1KG3 reference panel. 
+
+```bash
+python code/Monopogen/02_generate_germline_script.py --input_dir /path/to/Monopogen/bamlst --output_dir /path/to/Monopogen/germline_output --slurm_scripts_dir /path/to/slurm_scripts --threads 80
+```
+
+Modify `/path/to/Monopogen/bamlst`, `/path/to/Monopogen/germline_output`, and `/path/to/slurm_scripts` with your specific directories. Note that you could  adjust `--threads 80` with the number of threads you wish to allocate per job (adjust based on number of CPU you have).
+
+Batch submit the SLURM scripts as [before](#batch-submission-of-sbatch-scripts)
+
+#### 3. *Somatic Mutation Calling**: 
+
+To call somatic mutation based on the germiline mutation results, we use the [`03_generate_somatic_script.py`](code/Monopogen/03_generate_somatic_script.py) to generate SLURM scripts that will index VCF files from previous analyses and call somatic mutation using three different steps: `featureInfo`, `cellScan`, and `LDrefinement`.
+
+Before running it, ensure you have:
+- change the path in `export LD_LIBRARY_PATH=path/to/.anaconda3/envs/somaseqenv/lib:$LD_LIBRARY_PATH` to your conda lib. installation of 
+- This script requires the java to be installed or you have a module for java/17.0.6 (see the source code).
+
+To generate the script:
+```bash
+python code/Monopogen/03_generate_somatic_script.py --input_dir /path/to/input_data 
+                                                    --output_dir /path/to/output_data
+                                                    --slurm_scripts_dir /path/to/Monopogen
+                                                    --genome_fa_path /path/to/STARSoloModifiedgenome.fa
+                                                    --threads 64
+```
+Modify `/path/to/input_data`, `/path/to/output_data`, `/path/to/slurm_scripts` ,`/path/to/genome.fa` (the path to your modified genome FASTA file `Homo_sapiens.GRCh38.dna.primary_assembly.modified.fa`) and threads accordingly,
+
+Then batch submit the SLURM scripts as [before](#batch-submission-of-sbatch-scripts).
 
 ## Supplementary Scripts ##
 

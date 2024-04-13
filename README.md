@@ -225,7 +225,7 @@ We aggregate mutation counts by cell type and donor to form pseudo-bulk data poi
 **Model Formula**:
 Note that the formula we used here is:
 $$log10(total\; count) \sim (sub)Class + log10(read\;count) + log10(cell\;count) + log10(Age) + Sex + Disease + ROI+ (1|donor_{id})$$
-Before running [`05_mixed_effect_model.R`](code/4_differential/05_mixed_effect_model.R), please ensure to customize the model's formula model <- lmer() to fit your dataset specifics and research questions.
+Before running [`05_mixed_effect_model.R`](code/4_differential/05_mixed_effect_model.R) , please ensure to customize the model's formula model <- lmer() to fit your dataset specifics and research questions.
 
 Linear mixed-effects models were fitted, and P values from a t-test were calculated for each fixed effect as implemented in the lmerTest (v.3.1-3) R package (Kuznetsova et al., 2017). We also performed ANOVA to test the significance of individual fixed effects.
 Pairwise comparison is performed using Tukey's HSD test to compare the significance of difference in all possible pairs of somatic mutation count means for cell types while controlling for the family-wise error rate.

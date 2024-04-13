@@ -10,6 +10,9 @@ This repo is a place holder for running the SOMA-seq pipeline and reproducing th
 * [Somatic mutation calling](#somatic-mutation-calling)
   * [Alignment](#aligment)
   * [Monopogen](#monopogen)
+  * [Preprocess for Analysis](#preprocess-for-analysis)
+* [Differential mutation analysis](#differential-mutation-analysis)
+  * [Mixed-effects modeling](#mixed-effects-modeling-of-somatic-snv-burden)
 <!-- * [Quick Start](#quick-start)
   * [Data preprocess](#data-preprocess)
   * [Germline SNV calling](#germline-snv-calling)
@@ -79,10 +82,10 @@ It is optional but you could set global variables like `export INPUTFOLDER="/pat
 
 #### 0. **Generate Genome Directory**: 
 
-  The first step is preparing the GenomeDir for alignment. Run the [`00_generate_genomeDir.sh`](code/alignment/00_generate_genomeDir.sh) script in `code/alignment` to modify FASTA headers to match the GENCODE format and to generate a STAR genome directory.
+  The first step is preparing the GenomeDir for alignment. Run the [`00_generate_genomeDir.sh`](code/1_alignment/00_generate_genomeDir.sh) script in `code/alignment` to modify FASTA headers to match the GENCODE format and to generate a STAR genome directory.
 
   ```bash
-  ./code/alignment/00_generate_genomeDir.sh /path/to/Genomic_references/hg38 /path/to/logs
+  ./code/1_alignment/00_generate_genomeDir.sh /path/to/Genomic_references/hg38 /path/to/logs
   ```
 
   Replace `/path/to/Genomic_references/hg38` with the absolute path to where your FASTA and GTF files are located, and `/path/to/logs` with the path where you want the logs to be saved.
@@ -93,16 +96,16 @@ It is optional but you could set global variables like `export INPUTFOLDER="/pat
 
   Then we prepare SLURM batch scripts for processing each RNA-seq data sample with the STAR aligner. 
 
-  Before running [`01_generate_STARSolo_script.py`](code/alignment/01_generate_STARSolo_script.py), ensure you have:
+  Before running [`01_generate_STARSolo_script.py`](code/1_alignment/01_generate_STARSolo_script.py), ensure you have:
 
-  - Modified the `--genomeDir` in the [`01_generate_STARSolo_script.py`](code/alignment/01_generate_STARSolo_script.py) point to your `$BUILD_PATH/USE_THIS_GenomeDir` created in step 0.
+  - Modified the `--genomeDir` in the [`01_generate_STARSolo_script.py`](code/1_alignment/01_generate_STARSolo_script.py) point to your `$BUILD_PATH/USE_THIS_GenomeDir` created in step 0.
 
   - Downloaded `3M-february-2018.txt` whitelist file as instructed in `resources_to_download.txt` and updated the `--soloCBwhitelist` path in the script accordingly.
 
   To generate sbatch scripts:
 
   ```bash
-  python code/alignment/01_generate_STARSolo_script.py --input_dir /path/to/input_samples --output_dir /path/to/alignment_output --slurm_scripts_dir /path/to/generated_slurm_scripts
+  python code/1_alignment/01_generate_STARSolo_script.py --input_dir /path/to/input_samples --output_dir /path/to/alignment_output --slurm_scripts_dir /path/to/generated_slurm_scripts
   ```
 
   Modify `/path/to/input_samples`, `/path/to/alignment_output`, and `/path/to/generated_slurm_scripts` with your specific directories. The `input_dir` should contain directories for each of your samples that you wish to align.
@@ -121,7 +124,7 @@ It is optional but you could set global variables like `export INPUTFOLDER="/pat
 
 ### Monopogen ###
 
-Please reference the github repo for [Monopogen](https://github.com/KChen-lab/Monopogen) for trouble-shooting.
+Please reference the github repo of [Monopogen](https://github.com/KChen-lab/Monopogen) for trouble-shooting.
 
 Before running Monopogen, ensure you have:
 
@@ -131,38 +134,38 @@ Before running Monopogen, ensure you have:
 
 #### 2. **Preprocess and Germline Mutation Calling**: 
 
-First we prepare `.bam.lst` files that each contain one BAM file to be processed using the [`bam_list.sh`](code/Monopogen/bam_list.sh).
+First we prepare `.bam.lst` files that each contain one BAM file to be processed using the [`bam_list.sh`](code/2_monopogen/bam_list.sh).
 
 ```
 path="XXX/Monopogen"  # where Monopogen is downloaded
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${path}/apps
-./code/Monopogen/bam_list.sh /path/to/STARresult /path/to/Monopogen/bamlst
+./code/2_monopogen/bam_list.sh /path/to/STARresult /path/to/Monopogen/bamlst
 ```
 
-Then use the [`02_generate_germline_script.py`](code/Monopogen/02_generate_germline_script.py) to create SLURM scripts for each sample. These scripts will preprocess the data and call germline mutations using Monopogen.
+Then use the [`02_generate_germline_script.py`](code/2_monopogen/02_generate_germline_script.py) to create SLURM scripts for each sample. These scripts will preprocess the data and call germline mutations using Monopogen.
 
-Before running [`02_generate_germline_script.py`](code/alignment/02_generate_germline_script.py), ensure you have:
+Before running, ensure you have:
 - change the **`-p /path/to/1KG3_imputation_panel/`** pointing to your folder to 1KG3 reference panel. 
 
 ```bash
-python code/Monopogen/02_generate_germline_script.py --input_dir /path/to/Monopogen/bamlst --output_dir /path/to/Monopogen/germline_output --slurm_scripts_dir /path/to/slurm_scripts --threads 80
+python code/2_monopogen/02_generate_germline_script.py --input_dir /path/to/Monopogen/bamlst --output_dir /path/to/Monopogen/germline_output --slurm_scripts_dir /path/to/slurm_scripts --threads 80
 ```
 
 Modify `/path/to/Monopogen/bamlst`, `/path/to/Monopogen/germline_output`, and `/path/to/slurm_scripts` with your specific directories. Note that you could  adjust `--threads 80` with the number of threads you wish to allocate per job (adjust based on number of CPU you have).
 
 Batch submit the SLURM scripts as [before](#batch-submission-of-sbatch-scripts)
 
-#### 3. *Somatic Mutation Calling**: 
+#### 3. **Somatic Mutation Calling**: 
 
-To call somatic mutation based on the germiline mutation results, we use the [`03_generate_somatic_script.py`](code/Monopogen/03_generate_somatic_script.py) to generate SLURM scripts that will index VCF files from previous analyses and call somatic mutation using three different steps: `featureInfo`, `cellScan`, and `LDrefinement`.
+To call somatic mutation based on the germiline mutation results, we use the [`03_generate_somatic_script.py`](code/2_monopogen/03_generate_somatic_script.py) to generate SLURM scripts that will index VCF files from previous analyses and call somatic mutation using three different steps: `featureInfo`, `cellScan`, and `LDrefinement`.
 
 Before running it, ensure you have:
-- change the path in `export LD_LIBRARY_PATH=path/to/.anaconda3/envs/somaseqenv/lib:$LD_LIBRARY_PATH` to your conda lib. installation of 
+- change the path in `export LD_LIBRARY_PATH=path/to/.anaconda3/envs/somaseqenv/lib:$LD_LIBRARY_PATH` to your conda lib. to fullfill the dependency requirements of Monopogen.
 - This script requires the java to be installed or you have a module for java/17.0.6 (see the source code).
 
 To generate the script:
 ```bash
-python code/Monopogen/03_generate_somatic_script.py --input_dir /path/to/input_data 
+python code/2_monopogen/03_generate_somatic_script.py --input_dir /path/to/input_data 
                                                     --output_dir /path/to/output_data
                                                     --slurm_scripts_dir /path/to/Monopogen
                                                     --genome_fa_path /path/to/STARSoloModifiedgenome.fa
@@ -172,6 +175,80 @@ Modify `/path/to/input_data`, `/path/to/output_data`, `/path/to/slurm_scripts` ,
 
 Then batch submit the SLURM scripts as [before](#batch-submission-of-sbatch-scripts).
 
+### Preprocess for Analysis ###
+#### 4. **vcf processing**: 
+
+[`04_process_vcf_files.R`](code/3_preprocess_analysis/04_process_vcf_files.R) provide R functions to read the muliple results of Monopogen somatic mutation calling, combine with cell barcode information, use REDIPortal for RNA editing cite quality control, then incorporate Ensembl VEP (Variant Effect Predictor) results for genotyping annotation.
+
+First, process groups of RDS files for downstream analysis using the `readAndCombineRDSWithDonorId` function.
+
+```r
+source("code/3_preprocess_analysis/04_process_vcf_files.R")
+# Example of processing metadata and combining with Monopogen outputs
+sample_info <- fread("path/to/metadata.csv")
+barcode_info <- processBarcodeInfo("SOMA_seq/Monopogen/results", 
+                                   "SOMA_seq/STARsolo/STAR_results/", 
+                                   "/soloOut/GeneFull/filtered/barcode_counts.csv")
+
+combinedDataList_whole_0.3 <- readAndCombineRDSWithDonorId("SOMA_seq/Monopogen/results",
+sample_info)
+processed_whole <- preprocessMonopogen(dataList = combinedDataList_whole, 
+                                       info_meta = combinedMetadata, 
+                                       barcode_info, 
+                                       groupByFactors = "Subclass")
+
+# Optional, save processed data for ploting
+saveRDS(processed_whole, file = "path/to/processed_whole.rds")
+```
+
+For genomic studies, masking RNA editing sites is crucial as they can confound results of somatic mutation analyses. Integration of [REDIportal](http://srv00.recas.ba.infn.it/atlas/index.html) is recommended for this purpose. See instructions in [resources_to_download.txt](resources/resources_to_download.txt)
+
+```r
+processed_whole <- process_rna_editing("path/to/rna_editing_data.txt", processed_whole, sample_info)
+```
+
+Gene Information and VEP Integration: Combine genotyping information with gene annotations using data from Ensembl [VEP](https://useast.ensembl.org/Homo_sapiens/Tools/VEP?db=core;tl=VRi2Xtm6GBrxZ2Hb-9851365) (Variant Effect Predictor) to enhance the mutation analysis. The result including mutation type (e.g., missense) and gene-related impacts (e.g., intronic)
+
+```r
+# Save as input for VEP
+prepare_input_for_vep(processed_whole, "/path/to/output/transformed.csv")
+# Combine output
+process_vep_results(processed_whole, "/path/to/ensembl_vep_output.txt", sample_info, "/path/to/output/processed_data.rds")
+```
+
+## Differential mutation analysis
+### Somatic SNV burden ###
+#### 5. **Mixed effect Model**
+
+We aggregate mutation counts by cell type and donor to form pseudo-bulk data points. This pseudo-bulking is necessary to increase the statistical power of subsequent analyses. In our models, disease status, age, and other relevant covariates are treated as fixed effects, while variations attributable to individual donors are handled as random effects. This approach acknowledges the potential correlations among neurons derived from the same donor due to shared biological backgrounds.
+
+**Model Formula**:
+Note that the formula we used here is:
+$$log10(total\; count) \sim (sub)Class + log10(read\;count) + log10(cell\;count) + log10(Age) + Sex + Disease + ROI+ (1|donor_{id})$$
+Before running [`05_mixed_effect_model.R`](code/4_differential/05_mixed_effect_model.R), please ensure to customize the model's formula model <- lmer() to fit your dataset specifics and research questions.
+
+Linear mixed-effects models were fitted, and P values from a t-test were calculated for each fixed effect as implemented in the lmerTest (v.3.1-3) R package (Kuznetsova et al., 2017). We also performed ANOVA to test the significance of individual fixed effects.
+Pairwise comparison is performed using Tukey's HSD test to compare the significance of difference in all possible pairs of somatic mutation count means for cell types while controlling for the family-wise error rate.
+
+
+```r
+source("code/4_differential/04_process_vcf_files.R")
+result <- perform_mixed_effect_model(meta_cell_info, processed_whole, sample_info, my_color)
+model <- result$model # Extract the model from the results
+# Output the summary, variance-covariance matrix, and ANOVA results of the model
+summary(model)
+vcov(model)   
+anova(model)
+# Perform pairwise comparisons using Tukey's Honest Significant Difference test
+summary(glht(model, linfct = mcp(Subclass = "Tukey")))
+```
+**Statistical Tests Details**
+- **Summary and Variance-Covariance Matrix**: Provides detailed output about the fixed effects and the random effects variance components.
+- **ANOVA**: Tests the significance of the individual fixed effects included in the model.
+- **Pairwise Comparisons**: Conducted using Tukey's HSD test, this is used to discern the significant differences in mutation counts between cell types, adjusted for multiple testing and controlling the family-wise error rate.
+
 ## Supplementary Scripts ##
 
 - `generateBarcode.py`: Barcode Count Generator. This script produces Cellranger4-like `barcode_counts.csv` for STARSolo results. It also helps in assessing the quality of barcode tagging in sequencing experiments. Located in `utils/`, usage instructions are provided within the script.
+- `colorControl.Rmd`: Plotting, Cell Type Mapping and Color Control. This helper R script is designed for snRNA-seq analysis to ensure consistent visualization of cell type classifications across publications. Located in `utils/`.
+- `Figure`: This folder contain source code for plotting, note that this is for reproduction purpose, should be used along with the analysis code.

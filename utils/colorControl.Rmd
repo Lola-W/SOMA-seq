@@ -1,0 +1,95 @@
+This script is a helper script for plotting in snRNA seq analysis, mapping cell types to their parent class, and making cell type colors consistent across the paper.
+
+# Dependencies
+```{r}
+# Load necessary libraries
+libraries <- c("ggplot2", "cowplot", "ggpubr", "gridExtra", "grid", "dplyr", "tidyverse")
+new_packages <- libraries[!libraries %in% installed.packages()[,"Package"]]
+if(length(new_packages)) install.packages(new_packages)
+lapply(libraries, library, character.only = TRUE)
+```
+# Cell Class Subclass Mapping
+```{r}
+cell_classes <- c("L2/3 IT" = "Glutamatergic", "L4 IT" = "Glutamatergic", "L5/6 NP" = "Glutamatergic",
+                  "L5 ET" = "Glutamatergic", "L5 IT" = "Glutamatergic", "L6b" = "Glutamatergic",
+                  "L6 CT" = "Glutamatergic", "L6 IT" = "Glutamatergic", "L6 IT Car3" = "Glutamatergic",
+                  "Chandelier" = "GABAergic", "Lamp5" = "GABAergic", "Lamp5 Lhx6" = "GABAergic",
+                  "Pax6" = "GABAergic", "Sncg" = "GABAergic", "Sst" = "GABAergic",
+                  "Sst Chodl" = "GABAergic", "Vip" = "GABAergic", "Pvalb" = "GABAergic",
+                  "Astrocyte" = "Non-neuronal", "Oligodendrocyte" = "Non-neuronal",
+                  "OPC" = "Non-neuronal", "Endothelial" = "Non-neuronal", 
+                  "Microglia-PVM" = "Non-neuronal", "VLMC" = "Non-neuronal")
+
+```
+# Colors
+## Subclass Colors
+Could be changed to any color you like
+```{r}
+my_color <- c(
+"Lamp5 Lhx6" = "#945f50",
+"Lamp5" = "#da808c",
+"Pax6" = "#71248c",
+"Sncg" = "#df70ff",
+"Vip" = "#a55fbf",
+"Sst Chodl" = "#b1b10b",
+"Sst" = "#ff9900",
+"Pvalb" = "#d93136",
+"Chandelier" = "#f641a8",
+"L2/3 IT" = "#b1ec30",
+"L4 IT" = "#00e5e5",
+"L5 IT" = "#4fb2ad",
+"L6 IT" = "#a29922",
+"L6 IT Car3" = "#5100ff",
+"L5 ET" = "#0d5b78",
+"L6 CT" = "#2d8cb8",
+"L6b" = "#7044aa",
+"L5/6 NP" = "#3e9e64",
+"Astrocyte" = "#665c47",
+"OPC" = "#374a45",
+"Oligodendrocyte" = "#53776d",
+"Endothelial" = "#8d6c62",
+"VLMC" = "#697255",
+"Microglia-PVM" = "#94af97")
+```
+## Class Colors
+```{r}
+class_color <- c("GABAergic" = "#f5928a",
+                 "Glutamatergic" = "#bca2cd",
+                 "Non-neuronal" = "#c9bd2f")
+```
+
+# Example usage
+
+```{r}
+draw_label_theme <- function(label, theme = NULL, element = "text", ...) {
+  if (is.null(theme)) {
+    theme <- ggplot2::theme_get()
+  }
+  if (!element %in% names(theme)) {
+    stop("Element must be a valid ggplot theme element name")
+  }
+
+  elements <- ggplot2::calc_element(element, theme)
+
+  cowplot::draw_label(label, 
+                      fontfamily = elements$family,
+                      fontface = elements$face,
+                      colour = elements$color,
+                      size = elements$size,
+                      ...
+  )
+}
+```
+## change title
+```{r}
+# title <- ggdraw() +
+#   draw_label_theme("Socio-economic measures", 
+#                    theme = theme_cowplot(), element = "plot.title",
+#                    x = 0.05, hjust = 0, vjust = 1)
+# subtitle <- ggdraw() +
+#   draw_label_theme("By census tract, 2016",
+#                    theme = theme_cowplot(), element = "plot.subtitle",
+#                    x = 0.05, hjust = 0, vjust = 1)
+# plot_grid(title, subtitle, gridded, ncol = 1, rel_heights = c(0.1, 0.1, 1))
+```
+

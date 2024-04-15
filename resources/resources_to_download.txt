@@ -16,3 +16,7 @@ We would suggest using: http://ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collectio
 
 # REDIportal
 hg38 RNA editing cites Database: http://srv00.recas.ba.infn.it/webshare/ATLAS/donwload/TABLE1_hg38.txt.gz
+
+# AlphaMissense
+full AlphaMissense dataset for hg38: https://storage.googleapis.com/dm_alphamissense/AlphaMissense_hg38.tsv.gz
+Note the the unzipped dataset takes 5GB, ensure the designated directory have enough storage for it.

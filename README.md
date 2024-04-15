@@ -1,5 +1,5 @@
 # SOMA-seq code repository
-This repo is a place holder for running the SOMA-seq pipeline and reproducing the presented analyses.
+This repository contains code for running the SOMA-seq pipeline and reproducing the analyses presented in the associated publication. The package is designed to improve the current workflow for analyzing single cell variant data, providing functions for data processing, quality assessment, and visualization.
 
 ## Table of Contents
 
@@ -12,21 +12,12 @@ This repo is a place holder for running the SOMA-seq pipeline and reproducing th
   * [Monopogen](#monopogen)
   * [Preprocess for Analysis](#preprocess-for-analysis)
 * [Differential mutation analysis](#differential-mutation-analysis)
-  * [Mixed-effects modeling](#mixed-effects-modeling-of-somatic-snv-burden)
-<!-- * [Quick Start](#quick-start)
-  * [Data preprocess](#data-preprocess)
-  * [Germline SNV calling](#germline-snv-calling)
-* [Germline SNV calling from snRNA-seq](#germline-snv-calling-from-snRNA-seq)
-  * [variant calling](#variant-calling)
-  * [genotyping accuracy evaluation](#genotyping-accuracy-evaluation)
-  * [ancestry identification](#ancestry-identification)
-* [Somatic SNV calling from scRNA-seq](#somatic-snv-calling-from-scrna-seq)
-  * [preprocess](#preprocess)
-  * [germline calling](#germline-calling)
-  * [ld refinement on putative somatic SNVs](#ld-refinement-on-putative-somatic-SNVs)
-* [FAQs](#faqs) -->
+  * [Somatic SNV burden](#somatic-snv-burden)
+  * [Pathway Enrichment Analsis](#pathway-enrichment-analsis)
+* [Pathogenicity Analysis](#pathogenicity-analysis)
 * [Supplementary Scripts](#supplementary-scripts)
-* [Citation](#citation)
+
+<!---* [Citation](#citation)-->
 
 [//]: # 
 
@@ -41,11 +32,11 @@ The pipeline consists of three main stages:
 
 1. Somatic mutation calling: Utilizing Monopogen, a state-of-the-art SNV calling package developed by [Ken chen's lab](https://www.mdanderson.org/research/departments-labs-institutes/labs/ken-chen-laboratory.html), Soma-seq accurately identifies somatic mutations from snRNA-seq data. Monopogen is specifically designed to handle the unique challenges of single-cell sequencing datasets, such as sparsity and allelic dropout, ensuring high-confidence mutation calls.
 
-2. Differential mutation analysis: Soma-seq performs a comprehensive analysis of the consequences of differential mutations across various cell types and disease groups. By employing advanced statistical methods and mixed-effect modeling, the pipeline accounts for potential confounding factors, such as age, read depth, and donor-specific effects, to uncover cell type-specific mutation patterns and rates.
+2. Differential mutation analysis: Soma-seq performs a comprehensive analysis of the consequences of differential mutations across various cell types and disease groups. By employing advanced statistical methods and mixed-effect modeling, the pipeline accounts for potential confounding factors, such as age, read depth, and donor-specific effects; then use pathway enrichment to uncover cell type-specific mutation patterns and rates.
 
 3. Pathogenicity analysis: Leveraging the power of [AlphaMissense](https://www.science.org/doi/10.1126/science.adg7492) predictions, Soma-seq assesses the pathogenic potential of identified somatic mutations. This stage provides valuable insights into the functional impact of mutations, aiding in the identification of potentially deleterious variants that may contribute to disease pathogenesis.
 
-The output of Soma-seq includes raw csv summary of putative mutations, summaries of single base substitution patterns, mutation abundance across cell types, ranked enriched gene lists, pathway enrichment results, and a list of deleterious somatic mutations annotated by AlphaMissense. These comprehensive results enable researchers to gain a deeper understanding of the role of somatic mutations in various diseases and cell types, facilitating the discovery of potential disease biomarkers and the inference of underlying causal factors.
+The outputs of Soma-seq includes raw csv summary of putative mutations, summaries of single base substitution patterns, mutation abundance across cell types, ranked enriched gene lists, pathway enrichment results, and a list of deleterious somatic mutations annotated by AlphaMissense. These comprehensive results enable researchers to gain a deeper understanding of the role of somatic mutations in various diseases and cell types, facilitating the discovery of potential disease biomarkers and the inference of underlying causal factors.
 
 ## Installation
 SOMA-seq is avaiable on github
@@ -220,12 +211,12 @@ process_vep_results(processed_whole, "/path/to/ensembl_vep_output.txt", sample_i
 ### Somatic SNV burden ###
 #### 5. **Mixed effect Model**
 
-We aggregate mutation counts by cell type and donor to form pseudo-bulk data points. This pseudo-bulking is necessary to increase the statistical power of subsequent analyses. In our models, disease status, age, and other relevant covariates are treated as fixed effects, while variations attributable to individual donors are handled as random effects. This approach acknowledges the potential correlations among neurons derived from the same donor due to shared biological backgrounds.
+To increase statistical power, we aggregate mutation counts across cell types and donors, creating pseudo-bulk data points. We model disease status, age, and other covariates as fixed effects, while capturing inter-donor variability as random effects, which helps account for biological correlations among neurons from the same donor.
 
 **Model Formula**:
 Note that the formula we used here is:
 $$log10(total\; count) \sim (sub)Class + log10(read\;count) + log10(cell\;count) + log10(Age) + Sex + Disease + ROI+ (1|donor_{id})$$
-Before running [`05_mixed_effect_model.R`](code/4_differential/05_mixed_effect_model.R) , please ensure to customize the model's formula model <- lmer() to fit your dataset specifics and research questions.
+Before running [`05_mixed_effect_model.R`](code/4_differential/05_mixed_effect_model.R) , please ensure to customize the model's formula `model <- lmer()` to fit your dataset specifics and research questions.
 
 ```r
 source("code/4_differential/05_process_vcf_files.R")
@@ -243,8 +234,72 @@ summary(glht(model, linfct = mcp(Subclass = "Tukey")))
 - **ANOVA**: Tests the significance of the individual fixed effects included in the model.
 - **Pairwise Comparisons**: Conducted using Tukey's HSD test, this is used to discern the significant differences in mutation counts between cell types, adjusted for multiple testing and controlling the family-wise error rate.
 
+### Pathway Enrichment Analsis ###
+#### 6. **Differential Analysis**
+
+Differential mutation analysis is executed using the NEBULA-HL tool, which is designed for single-cell differential expression analysis but adapted here for mutation analysis to inverstigate most differentially mutated genes. The `perform_mutation_analysis()` function from the [06_differential.R](code/4_differential/06_differential.R) script encapsulates the main steps:
+
+1. Filter and process the meta_cell_info data frame.
+2. Calculate barcode count sums for each cell type and donor.
+3. Prepare the mutation count matrix and associated metadata.
+4. Perform NEBULA-HL analysis using the nebula() function with appropriate parameters.
+
+```r
+install.packages("devtools")
+devtools::install_github("lhe17/nebula")
+source("code/4_differential/06_differential.R")
+result <- perform_mutation_analysis(counts_matrix, meta_cell_info, sample_info)
+```
+
+#### 7. **Pathway Enrichment**
+
+To systematically understand the impact of differentially mutated genes, pathway enrichment analysis can be used to identified disease-related pathways. You could us non-thresholded Gene Set Enrichment Analysis (GSEA) on the ranked gene list using the GSEA software with the newest geneset collection from the Bader Lab, Human_GOBP_AllPathways_withPFOCR_no_GO_iea_March_01_2024_symbol.gmt, for its up-to-date and inclusive nature.
+
+The analysis can be conducted using the GSEAPreanked mode with default parameters, with a few modifications to increase specificity without loss of generality:
+
+* Collapse: No_Collapse
+* Max size: 200
+* Min size: 15
+
+Further details and a complete tutorial on using GSEA can be found in the [Bader lab tutorial](https://baderlab.github.io/CBW_Pathways_2020/gsea-lab.html).
+Helper function is provided in [06_differential.R](code/4_differential/06_differential.R) to generate rank files
+```r
+automate_rank_and_save(res, "enrichment/rnk_files")
+```
+
+The Epilepsy group was set as positive, and Tumor samples were set as negative, you could modify it by adding a negative in the rank below:
+
+$$rank = (-log10(p\; value) * sign(logFC)$$
+
+## Pathogenicity analysis
+#### 8. MissensePathoR
+
+Variant consequences are annotated using AlphaMissense predictions, which provide a dataset of 71 million possible single amino acid substitutions. The somatic mutations are annotated with predicted scalar values ranging from benign (0) to pathogenic (1). The [MissensePathoR](https://github.com/Lola-W/MissensePathoR?tab=readme-ov-file) R package to enable pathogenicity analysis at two levels:
+
+1. Cell Subclass level: Cntrast the pathogenic variant proportion across cell subclasses.
+2. Single variant level
+
+To use the full AlphaMissense dataset for hg38, download it from the official source (https://storage.googleapis.com/dm_alphamissense/AlphaMissense_hg38.tsv.gz) as instructed in [resources_to_download.txt](resources/resources_to_download.txt)
+
+Below we provide an example usage, please change `path/to/AlphaMissense_hg38.tsv` to your path for downloaed AlphaMissense dataset. For a more detailed tutorial, use `browseVignettes("MissensePathoR")` to access the package vignettes 
+```r
+source("code/5_pathogenicity/07_pathogenicity.R")
+variantsample <- prepare_variant_data(processed_whole)
+AlphaMissensehg38 <- MissensePathoR::readAlphaMissenseData("path/to/AlphaMissense_hg38.tsv")
+# Fetch pathogenicity scores
+prediction <- MissensePathoR::predictPathoScore(variantsample, AlphaMissensehg38)
+# Summarize pathogenicity scores by disease and cell subclass
+scoreSummary(prediction, category = "disease")
+scoreSummary(prediction, category = "Subclass")
+
+# Summarize pathogenicity class by disease
+diseasePrediction <- prediction %>% rename(group = disease)
+classSummary(diseasePrediction)
+```
+
+
 ## Supplementary Scripts ##
 
 - `generateBarcode.py`: Barcode Count Generator. This script produces Cellranger4-like `barcode_counts.csv` for STARSolo results. It also helps in assessing the quality of barcode tagging in sequencing experiments. Located in `utils/`, usage instructions are provided within the script.
 - `colorControl.Rmd`: Plotting, Cell Type Mapping and Color Control. This helper R script is designed for snRNA-seq analysis to ensure consistent visualization of cell type classifications across publications. Located in `utils/`.
-- `Figure`: This folder contain source code for plotting, note that this is for reproduction purpose, should be used along with the analysis code.
+- `Figure`: This folder contains source code for plotting figures. Note that this code is provided for reproduction purposes and documentation only. The functions should be used along with the analysis code.
